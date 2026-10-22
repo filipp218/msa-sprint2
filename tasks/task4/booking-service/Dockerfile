@@ -1,25 +1,14 @@
-# Используем официальный минимальный образ Go
-FROM golang:1.21-alpine
-
-# TODO: Добавить необходимые пакеты (например, curl)
-# Ожидаемый код:
-RUN apk add --no-cache curl
-
-# Устанавливаем рабочую директорию
+# Build
+FROM golang:1.21-alpine AS builder
 WORKDIR /app
+COPY go.mod main.go ./
+RUN CGO_ENABLED=0 go build -o booking-service -trimpath -ldflags="-s -w" .
 
-# Копируем Go-файл и скрипт проверки DNS
-COPY main.go .
-COPY check-dns.sh .
-
-# TODO: Сделать скрипт исполняемым
-# Ожидаемый код:
-RUN chmod +x check-dns.sh
-
-# TODO: Собрать бинарник из main.go
-# Ожидаемый код:
-RUN go build -o booking-service main.go
-
-# TODO: Задать команду запуска
-# Ожидаемый код:
+# Runtime
+FROM alpine:3.19
+RUN adduser -D -u 65532 -g nobody appuser
+WORKDIR /app
+COPY --from=builder /app/booking-service .
+USER appuser
+EXPOSE 8080
 CMD ["./booking-service"]
